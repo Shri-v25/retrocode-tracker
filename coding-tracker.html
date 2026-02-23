@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE QUEST - Daily Coding Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+:root {
+  --mario-red: #e52521;
+  --mario-blue: #049cd8;
+  --mario-yellow: #fbd000;
+  --mario-green: #43b047;
+  --mario-brown: #8B4513;
+  --sky: #5c94fc;
+  --ground: #c84b11;
+  --brick: #d07c2e;
+  --cloud: #fff;
+  --dark-bg: #1a0a00;
+  --pipe-green: #1e7a00;
+  --coin: #ffd700;
+  --pixel-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+  --text-shadow: 3px 3px 0px rgba(0,0,0,0.8);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; image-rendering: pixelated; }
+
+body {
+  font-family: 'Press Start 2P', monospace;
+  background: var(--sky);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ===== ANIMATED SKY BACKGROUND ===== */
+.sky-bg {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(180deg, #5c94fc 0%, #8ab4ff 60%, #c8e4ff 100%);
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Scrolling ground at bottom */
+.ground-strip {
+  position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
+  background: repeating-linear-gradient(90deg, var(--ground) 0px, var(--ground) 32px, #a03008 32px, #a03008 34px);
+  z-index: 2;
+  border-top: 4px solid #7a2000;
+}
+
+/* Clouds */
+.cloud {
+  position: fixed;
+  background: white;
+  border-radius: 0;
+  z-index: 1;
+  animation: cloudFloat linear infinite;
+  clip-path: polygon(
+    10% 60%, 0% 60%, 0% 100%, 100% 100%, 100% 60%, 85% 60%,
+    80% 40%, 70% 20%, 55% 10%, 40% 10%, 25% 20%, 15% 40%
+  );
+}
+.cloud::before, .cloud::after {
+  content: '';
+  position: absolute;
+  background: white;
+}
+
+.cloud1 { width:80px; height:40px; top:8%; animation-duration:25s; animation-delay:-5s; }
+.cloud2 { width:120px; height:55px; top:15%; animation-duration:32s; animation-delay:-12s; }
+.cloud3 { width:60px; height:30px; top:5%; animation-duration:20s; animation-delay:-8s; }
+
+@keyframes cloudFloat {
+  from { transform: translateX(110vw); }
+  to { transform: translateX(-200px); }
+}
+
+/* Hills */
+.hills {
+  position: fixed; bottom: 56px; left: 0; width: 100%; height: 100px;
+  z-index: 1;
+  background: transparent;
+}
+.hill {
+  position: absolute;
+  border-radius: 50% 50% 0 0;
+  bottom: 0;
+  animation: hillScroll linear infinite;
+}
+.hill1 { width:200px; height:80px; background:#43b047; left:10%; animation-duration:20s; animation-delay:0s; }
+.hill2 { width:140px; height:60px; background:#3a9a3e; left:50%; animation-duration:20s; animation-delay:-8s; }
+.hill3 { width:160px; height:70px; background:#43b047; left:75%; animation-duration:20s; animation-delay:-4s; }
+
+/* ===== QUESTION BLOCKS ===== */
+.q-blocks {
+  position: fixed; top: 20%; left: 0; width: 100%;
+  display: flex; gap: 20px; padding: 0 40px;
+  z-index: 1; pointer-events: none;
+}
+.q-block {
+  width:32px; height:32px;
+  background: var(--mario-yellow);
+  border: 4px solid var(--mario-brown);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Press Start 2P'; font-size: 10px; color: #5a3000;
+  animation: blockBob 1s ease-in-out infinite;
+  box-shadow: 3px 3px 0 #000;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.q-block:hover { animation: blockHit 0.3s ease; }
+@keyframes blockBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+@keyframes blockHit { 0%{transform:translateY(0)} 50%{transform:translateY(-12px)} 100%{transform:translateY(0)} }
+
+/* ===== MARIO RUNNER ===== */
+.mario-runner {
+  position: fixed; bottom: 64px; left: -60px; z-index: 3;
+  animation: marioRun 15s linear infinite;
+  font-size: 32px;
+  filter: drop-shadow(2px 2px 0px #000);
+}
+@keyframes marioRun {
+  0% { left: -60px; }
+  100% { left: 110%; }
+}
+
+/* ===== COIN ANIMATION ===== */
+.coin-anim {
+  position: fixed;
+  font-size: 20px;
+  z-index: 10;
+  animation: coinPop 1s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes coinPop {
+  0% { transform: translateY(0) scale(0); opacity:1; }
+  50% { transform: translateY(-60px) scale(1.5); opacity:1; }
+  100% { transform: translateY(-100px) scale(0); opacity:0; }
+}
+
+/* ===== MAIN CONTAINER ===== */
+#app {
+  position: relative; z-index: 5;
+  min-height: 100vh;
+  padding: 20px 20px 80px;
+  max-width: 900px; margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.header {
+  text-align: center; padding: 20px 0 10px;
+  position: relative;
+}
+.logo {
+  font-size: 28px; color: var(--mario-yellow);
+  text-shadow: 4px 4px 0 var(--mario-red), 8px 8px 0 #000;
+  letter-spacing: 2px;
+  animation: logoPulse 2s ease-in-out infinite;
+  display: inline-block;
+}
+@keyframes logoPulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+.subtitle {
+  font-size: 8px; color: white; margin-top: 8px;
+  text-shadow: var(--text-shadow);
+}
+
+/* ===== PIXEL PANEL ===== */
+.panel {
+  background: rgba(10,20,60,0.92);
+  border: 4px solid var(--mario-yellow);
+  box-shadow: 6px 6px 0 #000, inset 0 0 0 2px rgba(255,200,0,0.1);
+  padding: 20px;
+  margin: 16px 0;
+  position: relative;
+}
+.panel::before {
+  content: '';
+  position: absolute; top:-2px; left:-2px; right:-2px; bottom:-2px;
+  border: 2px solid rgba(255,255,255,0.1);
+  pointer-events: none;
+}
+.panel-title {
+  font-size: 10px; color: var(--mario-yellow);
+  text-shadow: var(--text-shadow);
+  margin-bottom: 16px;
+  border-bottom: 2px solid rgba(255,200,0,0.3);
+  padding-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ===== MODE SELECTOR ===== */
+.modes-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.mode-btn {
+  background: transparent;
+  border: 3px solid rgba(255,255,255,0.2);
+  padding: 14px 10px;
+  cursor: pointer;
+  font-family: 'Press Start 2P'; font-size: 7px;
+  color: white;
+  text-align: center;
+  transition: all 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+.mode-btn:hover { border-color: var(--mario-yellow); transform: translate(-2px,-2px); box-shadow: 4px 4px 0 #000; }
+.mode-btn.active { border-color: var(--mario-yellow); background: rgba(255,200,0,0.1); }
+.mode-btn .mode-icon { font-size: 24px; display: block; margin-bottom: 8px; }
+.mode-btn .mode-name { color: var(--mario-yellow); font-size: 8px; display: block; margin-bottom: 4px; }
+.mode-btn .mode-time { color: var(--mario-green); font-size: 7px; }
+.mode-btn .mode-desc { color: rgba(255,255,255,0.6); font-size: 6px; margin-top: 6px; line-height: 1.6; }
+
+/* Standard = blue border */
+.mode-btn[data-mode="standard"].active { border-color: var(--mario-blue); background: rgba(4,156,216,0.15); }
+.mode-btn[data-mode="depletion"].active { border-color: #ff8c00; background: rgba(255,140,0,0.15); }
+.mode-btn[data-mode="burnout"].active { border-color: var(--mario-red); background: rgba(229,37,33,0.15); }
+.mode-btn[data-mode="dead"].active { border-color: #888; background: rgba(128,128,128,0.15); }
+
+/* ===== TIMER ===== */
+.timer-wrap {
+  text-align: center; padding: 10px 0;
+}
+.timer-display {
+  position: relative;
+  display: inline-block;
+  margin: 10px auto;
+}
+
+/* Pixel circular timer */
+.timer-ring {
+  width: 220px; height: 220px;
+  position: relative;
+  margin: 0 auto;
+}
+.timer-ring canvas {
+  position: absolute; top:0; left:0;
+}
+.timer-center {
+  position: absolute; top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  text-align: center;
+}
+.timer-time {
+  font-size: 28px; color: white;
+  text-shadow: 0 0 20px var(--mario-yellow), var(--text-shadow);
+  display: block;
+}
+.timer-mode-label {
+  font-size: 7px; color: var(--mario-yellow);
+  display: block; margin-top: 4px;
+  text-shadow: var(--text-shadow);
+}
+.timer-pct {
+  font-size: 8px; color: var(--mario-green);
+  display: block; margin-top: 4px;
+}
+
+/* Stars floating around timer */
+.timer-stars {
+  position: absolute; width:100%; height:100%;
+  top:0; left:0; pointer-events: none;
+}
+
+/* ===== CONTROLS ===== */
+.controls {
+  display: flex; justify-content: center; gap: 12px;
+  margin-top: 16px;
+}
+.ctrl-btn {
+  background: var(--mario-red);
+  border: 3px solid #fff;
+  color: white; font-family: 'Press Start 2P'; font-size: 9px;
+  padding: 12px 20px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #000;
+  transition: all 0.1s;
+  text-shadow: var(--text-shadow);
+}
+.ctrl-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 #000; }
+.ctrl-btn:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 #000; }
+.ctrl-btn.green { background: var(--mario-green); }
+.ctrl-btn.blue { background: var(--mario-blue); }
+.ctrl-btn.yellow { background: #c8a000; color: #1a0a00; }
+
+/* ===== PROGRESS BAR (Pixel) ===== */
+.progress-bar-wrap {
+  margin: 12px 0;
+  border: 3px solid rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.5);
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--mario-yellow) 0px, var(--mario-yellow) 8px,
+    #c8a000 8px, #c8a000 16px
+  );
+  transition: width 1s linear;
+  position: relative;
+}
+.progress-bar-fill::after {
+  content: '▶';
+  position: absolute; right: -2px; top:50%;
+  transform: translateY(-50%);
+  font-size: 14px; color: white;
+}
+.progress-mario {
+  position: absolute; top: -2px;
+  font-size: 18px;
+  transition: left 1s linear;
+  z-index: 2;
+  filter: drop-shadow(2px 0 0 #000);
+}
+
+/* ===== STREAK ===== */
+.streak-display {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  flex-wrap: wrap;
+}
+.streak-fire {
+  font-size: 40px;
+  animation: firePulse 0.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 10px #ff6600);
+}
+@keyframes firePulse { from{transform:scale(1) rotate(-5deg)} to{transform:scale(1.15) rotate(5deg)} }
+.streak-count {
+  font-size: 32px; color: var(--mario-yellow);
+  text-shadow: 4px 4px 0 var(--mario-red), 6px 6px 0 #000;
+}
+.streak-label { font-size: 8px; color: rgba(255,255,255,0.7); }
+
+/* Calendar dots */
+.streak-calendar {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px;
+  justify-content: center;
+}
+.day-dot {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.2);
+  font-size: 8px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.day-dot.done { background: var(--mario-green); border-color: #2a7a2e; }
+.day-dot.missed { background: var(--mario-red); border-color: #8a1010; }
+.day-dot.today { border-color: var(--mario-yellow); animation: blinkBorder 1s ease-in-out infinite; }
+.day-dot.future { background: rgba(255,255,255,0.05); }
+@keyframes blinkBorder {
+  0%,100% { border-color: var(--mario-yellow); box-shadow: 0 0 6px var(--mario-yellow); }
+  50% { border-color: rgba(255,200,0,0.2); box-shadow: none; }
+}
+
+/* ===== MISS CHECKLIST MODAL ===== */
+.modal-overlay {
+  position: fixed; top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.85); z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.modal-overlay.visible { opacity: 1; pointer-events: all; }
+.modal-box {
+  background: #1a0a00;
+  border: 4px solid var(--mario-yellow);
+  box-shadow: 8px 8px 0 #000;
+  padding: 24px; max-width: 500px; width: 90%;
+  max-height: 80vh; overflow-y: auto;
+  transform: scale(0.8); transition: transform 0.3s;
+}
+.modal-overlay.visible .modal-box { transform: scale(1); }
+.modal-title {
+  font-size: 12px; color: var(--mario-yellow);
+  text-shadow: var(--text-shadow);
+  margin-bottom: 16px;
+}
+.checklist { list-style: none; }
+.checklist li {
+  margin: 8px 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.checklist li label {
+  font-family: 'Press Start 2P'; font-size: 7px;
+  color: white; cursor: pointer; line-height: 1.8;
+}
+.checklist input[type=checkbox] {
+  width: 16px; height: 16px;
+  accent-color: var(--mario-yellow);
+  cursor: pointer; flex-shrink: 0;
+}
+.other-reason {
+  font-family: 'Press Start 2P'; font-size: 7px;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,200,0,0.4);
+  color: white; padding: 8px; width: 100%;
+  margin-top: 8px;
+  resize: none; height: 60px;
+}
+
+/* ===== ACHIEVEMENT POPUP ===== */
+.achievement {
+  position: fixed; top: 20px; right: -400px;
+  background: #1a0a00;
+  border: 4px solid var(--mario-yellow);
+  box-shadow: 6px 6px 0 #000;
+  padding: 12px 16px;
+  z-index: 200;
+  display: flex; align-items: center; gap: 10px;
+  transition: right 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 280px;
+}
+.achievement.show { right: 20px; }
+.ach-icon { font-size: 24px; }
+.ach-text .ach-title { font-size: 9px; color: var(--mario-yellow); }
+.ach-text .ach-desc { font-size: 7px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+/* ===== POWER UPS / STATS ===== */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.stat-box {
+  background: rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,200,0,0.3);
+  padding: 10px; text-align: center;
+}
+.stat-icon { font-size: 22px; display: block; margin-bottom: 6px; }
+.stat-val { font-size: 14px; color: var(--mario-yellow); display: block; }
+.stat-label { font-size: 6px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+/* ===== PIPES DECORATION ===== */
+.pipes {
+  position: fixed; bottom: 60px; right: 30px; z-index: 2;
+  pointer-events: none;
+}
+.pipe {
+  width: 40px;
+  background: linear-gradient(90deg, var(--pipe-green) 0%, #2ca000 40%, #1e7a00 100%);
+  border: 3px solid #0a4a00;
+  margin: 0 auto;
+  box-shadow: 3px 0 0 #0a4a00;
+}
+.pipe-top {
+  width: 50px; height: 14px;
+  margin-left: -5px;
+  background: linear-gradient(180deg, #3ea800 0%, #1e7a00 100%);
+  border: 3px solid #0a4a00;
+}
+.pipe-body { height: 60px; }
+
+/* ===== GOOMBA ENEMY ===== */
+.goomba {
+  position: fixed; bottom: 64px; right: -60px;
+  font-size: 32px; z-index: 3;
+  animation: goombaWalk 20s linear infinite;
+  animation-delay: -7s;
+}
+@keyframes goombaWalk {
+  from { right: -60px; }
+  to { right: 110%; }
+}
+
+/* ===== FLOATING COINS ===== */
+@keyframes floatUp {
+  0% { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(-80px) rotate(360deg); opacity:0; }
+}
+
+/* Pixel brick decorations */
+.bricks-row {
+  position: fixed; top: 120px; left: 0; width: 100%; z-index: 1;
+  display: flex; gap: 2px; pointer-events: none;
+  opacity: 0.4;
+}
+.brick-block {
+  width:32px; height:32px;
+  background: repeating-linear-gradient(
+    0deg,
+    var(--brick) 0px, var(--brick) 14px,
+    #b86020 14px, #b86020 16px,
+    var(--brick) 16px, var(--brick) 30px
+  );
+  border: 2px solid #8a4010;
+  flex-shrink: 0;
+}
+
+/* Twinkling stars */
+.stars-bg { position: fixed; z-index: 0; width:100%; height:100%; top:0; left:0; pointer-events:none; }
+.star { position:absolute; background:white; animation: twinkle 2s ease-in-out infinite; }
+@keyframes twinkle { 0%,100%{opacity:0.2; transform:scale(0.8)} 50%{opacity:1; transform:scale(1.4)} }
+
+/* Session complete banner */
+.complete-banner {
+  position: fixed; top:50%; left:50%;
+  transform: translate(-50%,-50%) scale(0);
+  background: #1a0a00;
+  border: 6px solid var(--mario-yellow);
+  box-shadow: 10px 10px 0 #000;
+  padding: 30px 40px; text-align: center;
+  z-index: 300;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+.complete-banner.show { transform: translate(-50%,-50%) scale(1); }
+.complete-title { font-size: 18px; color: var(--mario-yellow); text-shadow: 4px 4px 0 var(--mario-red); }
+.complete-sub { font-size: 8px; color: white; margin-top: 10px; }
+
+/* Stars burst */
+.star-burst { position:fixed; z-index:290; pointer-events:none; }
+.burst-star {
+  position:absolute; font-size:24px;
+  animation: burstOut 1s ease-out forwards;
+}
+@keyframes burstOut {
+  from { transform: translate(0,0) rotate(0deg) scale(0); opacity:1; }
+  to { transform: var(--tx) rotate(360deg) scale(1); opacity:0; }
+}
+
+/* Notification dots */
+.notif-dot {
+  display: inline-block;
+  width:8px; height:8px;
+  background: var(--mario-red);
+  border-radius: 0;
+  animation: blinkDot 1s ease-in-out infinite;
+  margin-left: 6px;
+}
+@keyframes blinkDot { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* scrollbar */
+::-webkit-scrollbar { width:8px; }
+::-webkit-scrollbar-track { background: #0a0500; }
+::-webkit-scrollbar-thumb { background: var(--mario-yellow); border:1px solid #000; }
+
+/* === LIVES DISPLAY === */
+.lives {
+  display: flex; align-items: center; gap: 6px;
+}
+.heart { font-size: 14px; }
+.heart.lost { opacity:0.2; }
+
+/* Today section */
+.today-section { text-align:center; padding: 10px 0; }
+.today-date { font-size: 8px; color: rgba(255,255,255,0.7); margin-bottom: 6px; }
+.today-status { font-size: 10px; padding: 8px 16px; display: inline-block; }
+.today-status.idle { color: rgba(255,255,255,0.5); }
+.today-status.running { color: var(--mario-green); }
+.today-status.done { color: var(--mario-yellow); }
+
+/* Responsive */
+@media(max-width:600px){
+  .logo { font-size:18px; }
+  .modes-grid { grid-template-columns:1fr 1fr; }
+  .stats-grid { grid-template-columns:repeat(3,1fr); }
+  .timer-time { font-size:22px; }
+  .timer-ring { width:180px; height:180px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="sky-bg"></div>
+<div class="stars-bg" id="starsBg"></div>
+<div class="bricks-row" id="bricksRow"></div>
+<div class="hills">
+  <div class="hill hill1"></div>
+  <div class="hill hill2"></div>
+  <div class="hill hill3"></div>
+</div>
+<div class="cloud cloud1"></div>
+<div class="cloud cloud2"></div>
+<div class="cloud cloud3"></div>
+<div class="ground-strip"></div>
+<div class="mario-runner" id="marioRunner">🏃</div>
+<div class="goomba" id="goomba">👾</div>
+<div class="pipes">
+  <div class="pipe-top"></div>
+  <div class="pipe-body pipe"></div>
+</div>
+
+<!-- Achievement Popup -->
+<div class="achievement" id="achievement">
+  <span class="ach-icon" id="achIcon">⭐</span>
+  <div class="ach-text">
+    <div class="ach-title" id="achTitle">ACHIEVEMENT!</div>
+    <div class="ach-desc" id="achDesc">You unlocked something cool</div>
+  </div>
+</div>
+
+<!-- Complete Banner -->
+<div class="complete-banner" id="completeBanner">
+  <div class="complete-title" id="completeTitle">⭐ LEVEL COMPLETE! ⭐</div>
+  <div class="complete-sub" id="completeSub">SESSION DONE! +100 COINS</div>
+  <button class="ctrl-btn yellow" style="margin-top:16px;" onclick="dismissComplete()">CONTINUE ▶</button>
+</div>
+
+<!-- Miss Reason Modal -->
+<div class="modal-overlay" id="missModal">
+  <div class="modal-box">
+    <div class="modal-title">❓ WHY DID YOU MISS?</div>
+    <ul class="checklist" id="missChecklist">
+      <li><input type="checkbox" id="mc1"><label for="mc1">📚 College Exams / Tests</label></li>
+      <li><input type="checkbox" id="mc2"><label for="mc2">📝 Assignments / Submissions</label></li>
+      <li><input type="checkbox" id="mc3"><label for="mc3">✈️ Travelling / Trip</label></li>
+      <li><input type="checkbox" id="mc4"><label for="mc4">🤒 Sick / Not feeling well</label></li>
+      <li><input type="checkbox" id="mc5"><label for="mc5">🏫 College Fest / Events</label></li>
+      <li><input type="checkbox" id="mc6"><label for="mc6">👨‍👩‍👧 Family Function</label></li>
+      <li><input type="checkbox" id="mc7"><label for="mc7">😴 Overtired / Slept Off</label></li>
+      <li><input type="checkbox" id="mc8"><label for="mc8">🌐 No Internet / Power Cut</label></li>
+      <li><input type="checkbox" id="mc9"><label for="mc9">😤 Mentally Drained</label></li>
+      <li><input type="checkbox" id="mc10"><label for="mc10">🎮 Got distracted (games/social)</label></li>
+    </ul>
+    <textarea class="other-reason" id="otherReason" placeholder="Other reason... type here"></textarea>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="ctrl-btn green" onclick="saveMissReason()">SAVE ✔</button>
+      <button class="ctrl-btn" onclick="closeMissModal()">SKIP ✗</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="header">
+    <div class="logo">⭐ CODE QUEST ⭐</div>
+    <div class="subtitle">your daily coding adventure tracker</div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;">
+      <div class="lives" id="livesDisplay">
+        <span style="font-size:7px;color:rgba(255,255,255,0.6)">LIVES:</span>
+        <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+      </div>
+      <div style="font-size:7px;color:var(--coin)">🪙 <span id="totalCoins">0</span> COINS</div>
+    </div>
+  </div>
+
+  <!-- MODE SELECTOR -->
+  <div class="panel">
+    <div class="panel-title">🎮 SELECT YOUR MODE</div>
+    <div class="modes-grid">
+      <button class="mode-btn active" data-mode="standard" onclick="selectMode('standard',90)">
+        <span class="mode-icon">🌟</span>
+        <span class="mode-name">STANDARD</span>
+        <span class="mode-time">90 MIN</span>
+        <span class="mode-desc">Full power day. Legendary coder mode. Your streak depends on this!</span>
+      </button>
+      <button class="mode-btn" data-mode="depletion" onclick="selectMode('depletion',60)">
+        <span class="mode-icon">🍄</span>
+        <span class="mode-name">DEPLETION</span>
+        <span class="mode-time">60 MIN</span>
+        <span class="mode-desc">Low energy but still in the game. Grab the mushroom!</span>
+      </button>
+      <button class="mode-btn" data-mode="burnout" onclick="selectMode('burnout',30)">
+        <span class="mode-icon">🔥</span>
+        <span class="mode-name">BURNOUT</span>
+        <span class="mode-time">30 MIN</span>
+        <span class="mode-desc">Just surviving. Even heroes rest between worlds.</span>
+      </button>
+      <button class="mode-btn" data-mode="dead" onclick="selectMode('dead',15)">
+        <span class="mode-icon">💀</span>
+        <span class="mode-name">DEAD STATE</span>
+        <span class="mode-time">15 MIN</span>
+        <span class="mode-desc">Zero motivation. Just show up. 1-UP for trying!</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TIMER -->
+  <div class="panel">
+    <div class="panel-title">⏱️ POMODORO TIMER</div>
+    <div class="today-section">
+      <div class="today-date" id="todayDate"></div>
+      <div class="today-status idle" id="todayStatus">▶ PRESS START TO BEGIN YOUR QUEST</div>
+    </div>
+    <div class="timer-wrap">
+      <div class="timer-display">
+        <div class="timer-ring">
+          <canvas id="timerCanvas" width="220" height="220"></canvas>
+          <div class="timer-center">
+            <span class="timer-time" id="timerDisplay">90:00</span>
+            <span class="timer-mode-label" id="timerModeLabel">STANDARD MODE</span>
+            <span class="timer-pct" id="timerPct">100%</span>
+          </div>
+        </div>
+      </div>
+      <!-- Pixel progress bar -->
+      <div class="progress-bar-wrap" style="margin-top:16px;">
+        <div class="progress-bar-fill" id="progressFill" style="width:100%"></div>
+        <div class="progress-mario" id="progressMario" style="left:0%">🏃</div>
+      </div>
+      <div style="font-size:7px;color:rgba(255,255,255,0.5);margin-top:6px;">
+        [ PROGRESS TO GOAL ]
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctrl-btn green" id="startBtn" onclick="startTimer()">▶ START</button>
+      <button class="ctrl-btn yellow" id="pauseBtn" onclick="pauseTimer()" style="display:none">⏸ PAUSE</button>
+      <button class="ctrl-btn" id="resetBtn" onclick="resetTimer()">↺ RESET</button>
+    </div>
+  </div>
+
+  <!-- STREAK -->
+  <div class="panel">
+    <div class="panel-title">🔥 STREAK & PROGRESS</div>
+    <div class="streak-display">
+      <span class="streak-fire">🔥</span>
+      <div>
+        <div class="streak-count" id="streakCount">0</div>
+        <div class="streak-label">DAY STREAK</div>
+      </div>
+      <span class="streak-fire" style="animation-delay:0.3s">🔥</span>
+    </div>
+    <div style="font-size:7px;color:rgba(255,255,255,0.5);text-align:center;margin:10px 0;">LAST 21 DAYS</div>
+    <div class="streak-calendar" id="streakCalendar"></div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:10px;flex-wrap:wrap;">
+      <span style="font-size:6px;color:rgba(255,255,255,0.6)">🟩 DONE &nbsp; 🟥 MISSED &nbsp; ⬜ FUTURE</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="panel">
+    <div class="panel-title">📊 POWER STATS</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <span class="stat-icon">⭐</span>
+        <span class="stat-val" id="statTotal">0</span>
+        <span class="stat-label">TOTAL SESSIONS</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon">⏰</span>
+        <span class="stat-val" id="statHours">0h</span>
+        <span class="stat-label">HOURS CODED</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon">🏆</span>
+        <span class="stat-val" id="statBest">0</span>
+        <span class="stat-label">BEST STREAK</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon">🌟</span>
+        <span class="stat-val" id="statStandard">0</span>
+        <span class="stat-label">STANDARD DAYS</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon">💪</span>
+        <span class="stat-val" id="statWeek">0</span>
+        <span class="stat-label">THIS WEEK</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon">🪙</span>
+        <span class="stat-val" id="statCoins">0</span>
+        <span class="stat-label">COINS EARNED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MISSED DAY BUTTON -->
+  <div class="panel" style="text-align:center;">
+    <div class="panel-title">📝 LOG A MISSED DAY</div>
+    <div style="font-size:7px;color:rgba(255,255,255,0.6);margin-bottom:12px;line-height:2">
+      Missed coding yesterday? Log the reason and keep your honesty streak!
+    </div>
+    <button class="ctrl-btn" onclick="openMissModal()">📋 LOG MISSED DAY</button>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let state = JSON.parse(localStorage.getItem('codequest_state') || '{}');
+const defaultState = {
+  streak: 0, bestStreak: 0, totalSessions: 0,
+  totalMinutes: 0, standardDays: 0, coins: 0,
+  lastCodeDate: null, days: {}, missReasons: {}
+};
+state = { ...defaultState, ...state };
+
+let currentMode = 'standard';
+let currentDuration = 90 * 60;
+let timeLeft = currentDuration;
+let timerInterval = null;
+let isRunning = false;
+let sessionStarted = false;
+
+const modeConfig = {
+  standard: { label: 'STANDARD MODE', color: '#5c94fc', coins: 100, emoji: '🌟' },
+  depletion: { label: 'DEPLETION MODE', color: '#ff8c00', coins: 60, emoji: '🍄' },
+  burnout: { label: 'BURNOUT MODE', color: '#e52521', coins: 30, emoji: '🔥' },
+  dead: { label: 'DEAD STATE', color: '#888888', coins: 15, emoji: '💀' }
+};
+
+// ===== INIT =====
+function init() {
+  generateStars();
+  generateBricks();
+  renderCalendar();
+  updateStats();
+  renderTimer();
+  setDate();
+  checkMissedDays();
+}
+
+function setDate() {
+  const d = new Date();
+  document.getElementById('todayDate').textContent =
+    d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }).toUpperCase();
+}
+
+// ===== STARS =====
+function generateStars() {
+  const c = document.getElementById('starsBg');
+  for(let i=0;i<40;i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random()*3+1;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*60}%;left:${Math.random()*100}%;
+      animation-delay:${Math.random()*3}s;animation-duration:${1.5+Math.random()*2}s`;
+    c.appendChild(s);
+  }
+}
+
+// ===== BRICKS =====
+function generateBricks() {
+  const r = document.getElementById('bricksRow');
+  for(let i=0;i<30;i++){
+    const b = document.createElement('div'); b.className='brick-block'; r.appendChild(b);
+  }
+}
+
+// ===== MODE SELECT =====
+function selectMode(mode, minutes) {
+  currentMode = mode;
+  currentDuration = minutes * 60;
+  timeLeft = currentDuration;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+  document.getElementById('timerModeLabel').textContent = modeConfig[mode].label;
+  sessionStarted = false;
+  isRunning = false;
+  clearInterval(timerInterval);
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('pauseBtn').style.display = 'none';
+  document.getElementById('todayStatus').className = 'today-status idle';
+  document.getElementById('todayStatus').textContent = '▶ PRESS START TO BEGIN YOUR QUEST';
+  renderTimer();
+  spawnCoin();
+}
+
+// ===== TIMER =====
+function startTimer() {
+  if(isRunning) return;
+  isRunning = true;
+  sessionStarted = true;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('pauseBtn').style.display = '';
+  document.getElementById('todayStatus').className = 'today-status running';
+  document.getElementById('todayStatus').textContent = '🟢 CODING IN PROGRESS...';
+  timerInterval = setInterval(() => {
+    if(timeLeft > 0) {
+      timeLeft--;
+      renderTimer();
+    } else {
+      clearInterval(timerInterval);
+      sessionComplete();
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  isRunning = false;
+  clearInterval(timerInterval);
+  document.getElementById('pauseBtn').style.display = 'none';
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('startBtn').textContent = '▶ RESUME';
+  document.getElementById('todayStatus').textContent = '⏸ PAUSED';
+}
+
+function resetTimer() {
+  isRunning = false;
+  clearInterval(timerInterval);
+  timeLeft = currentDuration;
+  sessionStarted = false;
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('startBtn').textContent = '▶ START';
+  document.getElementById('pauseBtn').style.display = 'none';
+  document.getElementById('todayStatus').className = 'today-status idle';
+  document.getElementById('todayStatus').textContent = '▶ PRESS START TO BEGIN YOUR QUEST';
+  renderTimer();
+}
+
+function renderTimer() {
+  const m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+  const s = (timeLeft%60).toString().padStart(2,'0');
+  document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+  const pct = Math.round((timeLeft/currentDuration)*100);
+  document.getElementById('timerPct').textContent = `${pct}%`;
+
+  // progress bar
+  const fillPct = ((currentDuration - timeLeft) / currentDuration * 100);
+  document.getElementById('progressFill').style.width = fillPct + '%';
+  document.getElementById('progressMario').style.left = Math.min(fillPct, 92) + '%';
+
+  drawTimerCanvas(pct/100);
+}
+
+function drawTimerCanvas(pct) {
+  const canvas = document.getElementById('timerCanvas');
+  const ctx = canvas.getContext('2d');
+  const cx = 110, cy = 110, r = 90;
+  ctx.clearRect(0,0,220,220);
+
+  // Background track (pixelated dashes)
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Glow effect
+  const col = modeConfig[currentMode].color;
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 15;
+
+  // Progress arc (pixelated segments)
+  const segments = 36;
+  const filledSegs = Math.floor(pct * segments);
+  const gap = 0.05;
+  for(let i=0; i<segments; i++) {
+    const start = (i/segments)*Math.PI*2 - Math.PI/2;
+    const end = ((i+1)/segments)*Math.PI*2 - Math.PI/2 - gap;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, end);
+    if(i < filledSegs) {
+      // remaining time = filled (countdown)
+      const remaining = timeLeft / currentDuration;
+      if(i < Math.floor(remaining * segments)) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 14;
+      } else {
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 10;
+      }
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 10;
+    }
+    ctx.stroke();
+  }
+
+  // Redraw countdown arc
+  ctx.shadowBlur = 0;
+  const remaining = timeLeft / currentDuration;
+  for(let i=0; i<segments; i++) {
+    const start = (i/segments)*Math.PI*2 - Math.PI/2;
+    const end = ((i+1)/segments)*Math.PI*2 - Math.PI/2 - gap;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, end);
+    if(i < Math.floor(remaining * segments)) {
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 14;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 10;
+      ctx.shadowBlur = 0;
+    }
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  // Dot indicator
+  const angle = (remaining) * Math.PI * 2 - Math.PI/2;
+  ctx.beginPath();
+  ctx.arc(cx + r*Math.cos(angle), cy + r*Math.sin(angle), 8, 0, Math.PI*2);
+  ctx.fillStyle = col;
+  ctx.shadowColor = col;
+  ctx.shadowBlur = 20;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// ===== SESSION COMPLETE =====
+function sessionComplete() {
+  isRunning = false;
+  document.getElementById('todayStatus').className = 'today-status done';
+  document.getElementById('todayStatus').textContent = '⭐ SESSION COMPLETE! GREAT JOB!';
+
+  // Save to state
+  const today = getTodayKey();
+  const cfg = modeConfig[currentMode];
+  const mins = currentDuration / 60;
+
+  if(!state.days[today]) {
+    // Update streak
+    const yesterday = getDateKey(-1);
+    if(state.lastCodeDate === yesterday || state.lastCodeDate === today) {
+      state.streak++;
+    } else {
+      state.streak = 1;
+    }
+    if(state.streak > state.bestStreak) state.bestStreak = state.streak;
+    state.lastCodeDate = today;
+    state.days[today] = { mode: currentMode, minutes: mins, completed: true };
+    state.totalSessions++;
+    state.totalMinutes += mins;
+    if(currentMode === 'standard') state.standardDays++;
+    state.coins += cfg.coins;
+    saveState();
+    renderCalendar();
+    updateStats();
+  }
+
+  // Show complete banner
+  document.getElementById('completeTitle').textContent = `${cfg.emoji} LEVEL COMPLETE! ${cfg.emoji}`;
+  document.getElementById('completeSub').textContent = `+${cfg.coins} COINS EARNED! KEEP GOING!`;
+  document.getElementById('completeBanner').classList.add('show');
+
+  // Stars burst
+  showStarsBurst();
+  showAchievement('⭐', 'SESSION DONE!', `+${cfg.coins} coins earned!`);
+}
+
+function dismissComplete() {
+  document.getElementById('completeBanner').classList.remove('show');
+  document.getElementById('startBtn').textContent = '▶ START';
+  timeLeft = currentDuration;
+  renderTimer();
+}
+
+// ===== CALENDAR =====
+function renderCalendar() {
+  const cal = document.getElementById('streakCalendar');
+  cal.innerHTML = '';
+  const today = getTodayKey();
+  for(let i=20; i>=0; i--) {
+    const key = getDateKey(-i);
+    const dot = document.createElement('div');
+    dot.className = 'day-dot';
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dayNum = d.getDate();
+
+    if(key === today) {
+      dot.classList.add('today');
+      if(state.days[key]) dot.classList.add('done');
+    } else if(i === 0) {
+      // today
+    } else if(state.days[key] && state.days[key].completed) {
+      dot.classList.add('done');
+    } else if(key < today) {
+      dot.classList.add('missed');
+    } else {
+      dot.classList.add('future');
+    }
+
+    const modeEmojis = {standard:'🌟',depletion:'🍄',burnout:'🔥',dead:'💀'};
+    if(state.days[key]) {
+      dot.title = `${key}: ${state.days[key].mode} (${state.days[key].minutes}min)`;
+      dot.innerHTML = modeEmojis[state.days[key].mode] || '✓';
+      dot.style.fontSize = '10px';
+    } else {
+      dot.innerHTML = dayNum;
+      dot.style.fontSize = '7px';
+      dot.style.color = 'rgba(255,255,255,0.4)';
+    }
+    cal.appendChild(dot);
+  }
+  document.getElementById('streakCount').textContent = state.streak;
+}
+
+// ===== STATS =====
+function updateStats() {
+  document.getElementById('statTotal').textContent = state.totalSessions;
+  document.getElementById('statHours').textContent = Math.round(state.totalMinutes/60*10)/10 + 'h';
+  document.getElementById('statBest').textContent = state.bestStreak;
+  document.getElementById('statStandard').textContent = state.standardDays;
+  document.getElementById('totalCoins').textContent = state.coins;
+  document.getElementById('statCoins').textContent = state.coins;
+
+  // This week
+  let week = 0;
+  for(let i=0;i<7;i++){
+    const k = getDateKey(-i);
+    if(state.days[k] && state.days[k].completed) week++;
+  }
+  document.getElementById('statWeek').textContent = week;
+}
+
+// ===== MISS MODAL =====
+function openMissModal() { document.getElementById('missModal').classList.add('visible'); }
+function closeMissModal() { document.getElementById('missModal').classList.remove('visible'); }
+function saveMissReason() {
+  const reasons = [];
+  document.querySelectorAll('#missChecklist input:checked').forEach(cb => {
+    reasons.push(cb.nextElementSibling.textContent);
+  });
+  const other = document.getElementById('otherReason').value.trim();
+  if(other) reasons.push(other);
+
+  const yesterday = getDateKey(-1);
+  if(!state.days[yesterday]) {
+    state.days[yesterday] = { mode: 'missed', completed: false, reasons };
+    state.missReasons[yesterday] = reasons;
+    saveState();
+    renderCalendar();
+  }
+  closeMissModal();
+  showAchievement('📝', 'REASON LOGGED!', 'Stay honest, stay strong!');
+}
+
+// ===== CHECK MISSED DAYS =====
+function checkMissedDays() {
+  const yesterday = getDateKey(-1);
+  if(yesterday !== state.lastCodeDate && !state.days[yesterday]) {
+    // Show notification dot
+    const btn = document.querySelector('.ctrl-btn[onclick="openMissModal()"]');
+    if(btn) btn.innerHTML += '<span class="notif-dot"></span>';
+  }
+}
+
+// ===== HELPERS =====
+function getTodayKey() { return getDateKey(0); }
+function getDateKey(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split('T')[0];
+}
+function saveState() { localStorage.setItem('codequest_state', JSON.stringify(state)); }
+
+// ===== ACHIEVEMENT =====
+function showAchievement(icon, title, desc) {
+  const el = document.getElementById('achievement');
+  document.getElementById('achIcon').textContent = icon;
+  document.getElementById('achTitle').textContent = title;
+  document.getElementById('achDesc').textContent = desc;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ===== COIN SPAWN =====
+function spawnCoin(x, y) {
+  const coin = document.createElement('div');
+  coin.className = 'coin-anim';
+  coin.textContent = '🪙';
+  coin.style.left = (x || Math.random()*80+10) + '%';
+  coin.style.top = (y || Math.random()*50+20) + '%';
+  document.body.appendChild(coin);
+  setTimeout(() => coin.remove(), 1000);
+}
+
+// ===== STARS BURST =====
+function showStarsBurst() {
+  const cx = window.innerWidth/2, cy = window.innerHeight/2;
+  for(let i=0;i<12;i++){
+    const s = document.createElement('div');
+    s.className = 'burst-star';
+    const angle = (i/12)*Math.PI*2;
+    const dist = 80 + Math.random()*100;
+    s.style.cssText = `left:${cx}px;top:${cy}px;--tx:translate(${Math.cos(angle)*dist}px,${Math.sin(angle)*dist}px);animation-delay:${i*0.05}s`;
+    s.textContent = ['⭐','🌟','✨','🪙','💫'][Math.floor(Math.random()*5)];
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(),1200);
+  }
+  // Also spawn coins
+  for(let i=0;i<5;i++) setTimeout(()=>spawnCoin(),i*200);
+}
+
+// ===== Q-BLOCK Easter Egg =====
+// Add floating Q blocks
+function createQBlocks() {
+  const row = document.createElement('div');
+  row.className = 'q-blocks';
+  row.style.cssText = 'position:fixed;top:15%;z-index:2;pointer-events:none;';
+  for(let i=0;i<3;i++){
+    const b = document.createElement('div');
+    b.className = 'q-block';
+    b.textContent = '?';
+    b.style.animationDelay = i*0.3+'s';
+    b.style.pointerEvents = 'auto';
+    b.onclick = () => { spawnCoin(); showAchievement('🪙','BONUS!','Found a secret block!'); };
+    row.appendChild(b);
+  }
+  row.style.left = '30%';
+  document.body.appendChild(row);
+}
+
+// ===== INIT =====
+init();
+createQBlocks();
+
+// Add pixel sound simulation via visual feedback
+document.querySelectorAll('.ctrl-btn').forEach(btn => {
+  btn.addEventListener('mousedown', function() {
+    this.style.transform = 'translate(3px,3px)';
+    this.style.boxShadow = '1px 1px 0 #000';
+  });
+  btn.addEventListener('mouseup', function() {
+    this.style.transform = '';
+    this.style.boxShadow = '';
+  });
+});
+
+// Periodic random coin spawns (idle animation)
+setInterval(() => {
+  if(Math.random() < 0.3) spawnCoin();
+}, 8000);
+</script>
+</body>
+</html>
